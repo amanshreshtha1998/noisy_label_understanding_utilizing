@@ -23,11 +23,11 @@ noise_pattern = args.noise_pattern #'sym' or 'asym'
 dataset = args.dataset
 
 batch_size = 128
-INCV_epochs = 50
-INCV_iter = 4
-epochs = 200
-INCV_name = 'INCV_ResNet32'
-save_dir = 'saved_model'
+INCV_epochs = 50 ## number of epochs of the INCV algorithm
+INCV_iter = 4  ## number of iterations of INCV
+epochs = 200  ## number of epochs of training the network on the new data ( after INCV )
+INCV_name = 'INCV_ResNet32'  ## the network used in INCV 
+save_dir = 'saved_model'  
 if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
 filepath_INCV = os.path.join(save_dir,INCV_name+'-noisy.h5')
@@ -36,12 +36,12 @@ filepath_INCV = os.path.join(save_dir,INCV_name+'-noisy.h5')
 """ Data preparation """
 
 if dataset=='cifar10':
-    x_train, y_train, _, _, x_test, y_test = data.prepare_cifar10_data(data_dir='data/cifar-10-batches-py')
+    x_train, y_train, _, _, x_test, y_test = data.prepare_cifar10_data(data_dir='data/cifar-10-batches-py') ## forms the training and testing data
     Num_top = 1 #using top k prediction
     
-y_train_noisy = data.flip_label(y_train, pattern=noise_pattern, ratio=noise_ratio, one_hot=True)
-input_shape = list(x_train.shape[1:])
-n_classes = y_train.shape[1]
+y_train_noisy = data.flip_label(y_train, pattern=noise_pattern, ratio=noise_ratio, one_hot=True)  ## y_train_noisy is the noisy labels where we randomly change labels of some examples
+input_shape = list(x_train.shape[1:])  ## shape of the given as input to the models (IMP)
+n_classes = y_train.shape[1] 
 n_train = x_train.shape[0]
 np.save('y_train_total.npy',y_train)
 np.save('y_train_noisy_total.npy',y_train_noisy)
