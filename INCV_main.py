@@ -207,8 +207,10 @@ filepath1 = os.path.join(save_dir,model1_name+'-noisy.h5')
 filepath2 = os.path.join(save_dir,model2_name+'-noisy.h5')
 
 # bulid model
-lr = 1e-3
+lr = 1e-3   
 model1 = create_model(input_shape=input_shape, classes=n_classes, name=model1_name, architecture='ResNet32')
+## the model is given the input shape as [32,32,3] . the network used is ResNet32. (IMP - check the input shape of this )
+
 model1.compile(optimizer=optimizers.Adam(lr, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0), loss='categorical_crossentropy', metrics = ['accuracy'])
 model1.summary()
 model2 = create_model(input_shape=input_shape, classes=n_classes, name=model2_name, architecture='ResNet32')
