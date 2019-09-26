@@ -43,7 +43,7 @@ filepath_INCV = os.path.join(save_dir,'INCV_model.h5')
 #################################################################################################################################
 """ Data preparation """
 
-if dataset=='cifar10':
+if dataset=='cifar10': ## this is where the dataset argument is being used
     x_train, y_train, _, _, x_test, y_test = data.prepare_cifar10_data(data_dir='data/cifar-10-batches-py')
     Num_top = 1 #using top k prediction
 elif dataset=='cifar100':
