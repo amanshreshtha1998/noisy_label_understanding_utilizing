@@ -32,12 +32,17 @@ if not os.path.isdir(save_dir):
     os.makedirs(save_dir)
 filepath_INCV = os.path.join(save_dir,INCV_name+'-noisy.h5')
 
+## DONE
+
 #################################################################################################################################
 """ Data preparation """
 
 if dataset=='cifar10':
     x_train, y_train, _, _, x_test, y_test = data.prepare_cifar10_data(data_dir='data/cifar-10-batches-py') ## forms the training and testing data
+    ## DONE
     Num_top = 1 #using top k prediction
+    ## DONE
+    
     
 y_train_noisy = data.flip_label(y_train, pattern=noise_pattern, ratio=noise_ratio, one_hot=True)  ## y_train_noisy is the noisy labels where we randomly change labels of some examples
 input_shape = list(x_train.shape[1:])  ## shape of the given as input to the models (IMP)
@@ -47,6 +52,8 @@ np.save('y_train_total.npy',y_train)
 np.save('y_train_noisy_total.npy',y_train_noisy)
 clean_index = np.array([(y_train_noisy[i,:]==y_train[i,:]).all() for i in range(n_train)])# For tracking only, unused during training
 noisy_index = np.array([not i for i in clean_index])
+
+## DONE
 
 # Generator for data augmantation
 datagen = ImageDataGenerator(width_shift_range=4./32,  # randomly shift images horizontally (fraction of total width)
@@ -86,6 +93,8 @@ def INCV_lr_schedule(epoch):
     return lr
 INCV_lr_callback = LearningRateScheduler(INCV_lr_schedule)
 
+## DONE
+
 # Define optimizer and compile model
 optimizer = optimizers.Adam(lr=INCV_lr_schedule(0), beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 model = create_model(input_shape=input_shape, classes=n_classes, name=INCV_name, architecture='ResNet32')
@@ -94,6 +103,8 @@ weights_initial = model.get_weights()
 # Print model architecture
 print('Architecture of INCV-model:')
 model.summary()
+
+## DONE
 
 ##################################################################################################################################
 """ INCV iteration """
