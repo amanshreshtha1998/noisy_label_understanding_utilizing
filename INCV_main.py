@@ -200,6 +200,9 @@ for iter in range(1,INCV_iter+1):
     if iter==iter_save_best:
         INCV_save_best = False
     
+    
+## DONE
+    
 #np.save('train_idx.npy',train_idx)
 #np.save('y_train_noisy.npy',y_train_noisy[train_idx,:])
 #np.save('y_train.npy',y_train[train_idx,:])
@@ -278,7 +281,7 @@ print('batch_size_val: %d'%batch_size_val)
 
 
 print('Main training process...')
-Tk = 10
+Tk = 10   ## what is Tk ????
 if noise_pattern == 'asym' or eval_ratio>0.6:
     e_warm_up = 80
 else:
