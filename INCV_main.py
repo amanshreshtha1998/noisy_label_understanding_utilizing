@@ -12,7 +12,7 @@ import os
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--noise_ratio',type=float)
+parser.add_argument('--noise_ratio',type=float)  ## we take these three values input from the user
 parser.add_argument('--noise_pattern',type=str)
 parser.add_argument('--dataset',type=str)
 args = parser.parse_args()
@@ -22,10 +22,10 @@ noise_ratio = args.noise_ratio
 noise_pattern = args.noise_pattern #'sym' or 'asym'
 dataset = args.dataset
 
-batch_size = 128
+batch_size = 128   ### DOUT ( this is the batch size for what ? ( for INCV training) )
 INCV_epochs = 50 ## number of epochs of the INCV algorithm
 INCV_iter = 4  ## number of iterations of INCV
-epochs = 200  ## number of epochs of training the network on the new data ( after INCV )
+epochs = 200  ## number of epochs of training the network on the new data ( after INCV ) => Co-teaching method
 INCV_name = 'INCV_ResNet32'  ## the network used in INCV 
 save_dir = 'saved_model'  
 if not os.path.isdir(save_dir):
@@ -52,10 +52,11 @@ np.save('y_train_total.npy',y_train)
 np.save('y_train_noisy_total.npy',y_train_noisy)
 clean_index = np.array([(y_train_noisy[i,:]==y_train[i,:]).all() for i in range(n_train)])# For tracking only, unused during training
 noisy_index = np.array([not i for i in clean_index])
+# we make an array which tells which of the indices are noisy and which ones are clean.
 
 ## DONE
 
-# Generator for data augmantation
+# Generator for data augmantation ( this is not being used in our case )
 datagen = ImageDataGenerator(width_shift_range=4./32,  # randomly shift images horizontally (fraction of total width)
                              height_shift_range=4./32,  # randomly shift images vertically (fraction of total height)
                              horizontal_flip=True)  # randomly flip images       
@@ -71,12 +72,16 @@ class Noisy_acc(Callback):
         else:
             idx = val1_idx
         
+        # this val1_idx and val2_idx decides wether we are training on C1 and testing on C2 or the other way around
+        
         predict = np.argmax(self.model.predict(x_train[idx,:]),axis=1)
         _acc_mix = accuracy_score(np.argmax(y_train_noisy[idx,:],axis=1), predict)
         _acc_clean = accuracy_score(np.argmax(y_train_noisy[idx,:][clean_index[idx],:],axis=1), predict[clean_index[idx]])
         _acc_noisy = accuracy_score(np.argmax(y_train_noisy[idx,:][noisy_index[idx],:],axis=1), predict[noisy_index[idx]])
 
         print("- acc_mix: %.4f - acc_clean: %.4f - acc_noisy: %.4f\n" % (_acc_mix, _acc_clean, _acc_noisy))
+        ## the output when we are generating data with lower noise figure using INCV 
+        
         return
 noisy_acc = Noisy_acc()
 
@@ -97,7 +102,7 @@ INCV_lr_callback = LearningRateScheduler(INCV_lr_schedule)
 
 # Define optimizer and compile model
 optimizer = optimizers.Adam(lr=INCV_lr_schedule(0), beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-model = create_model(input_shape=input_shape, classes=n_classes, name=INCV_name, architecture='ResNet32')
+model = create_model(input_shape=input_shape, classes=n_classes, name=INCV_name, architecture='ResNet32') ## this is the INCV model, that is the model used in INCV for generating a clean dataset.
 model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics = ['accuracy'])
 weights_initial = model.get_weights()
 # Print model architecture
@@ -108,16 +113,20 @@ model.summary()
 
 ##################################################################################################################################
 """ INCV iteration """
+
+## The actual INCV code :=>
+
 train_idx = np.array([False for i in range(n_train)])
 val_idx = np.array([True for i in range(n_train)])
 INCV_save_best = True
-for iter in range(1,INCV_iter+1):
+for iter in range(1,INCV_iter+1): ## going through the INCV iterations 
     print('INCV iteration %d including first half and second half. In total %d iterations.'%(iter,INCV_iter))
     val_idx_int = np.array([i for i in range(n_train) if val_idx[i]]) # integer index
     np.random.shuffle(val_idx_int)
     n_val_half = int(np.sum(val_idx)/2)
     val1_idx = val_idx_int[:n_val_half] # integer index
     val2_idx = val_idx_int[n_val_half:] # integer index
+    
     #Train model on the first half of dataset
     First_half = True
     print('Iteration ' + str(iter) + ' - first half')
@@ -131,6 +140,8 @@ for iter in range(1,INCV_iter+1):
                                   callbacks=[ModelCheckpoint(filepath=filepath_INCV, monitor='val_acc', verbose=1, save_best_only=INCV_save_best),
                                              noisy_acc,
                                              INCV_lr_callback])
+    ## in above line, the training data is val1_idx and the testing data is val2_idx.
+    
     # Select samples of 'True' prediction
     del model
     model = load_model(filepath_INCV)    
@@ -215,6 +226,8 @@ for iter in range(1,INCV_iter+1):
 ##################################################################################################################################
 """ Main training """
 
+## The Co-teaching training of the DNN - here we use two models 
+
 model1_name = 'model1_ResNet32'
 model2_name = 'model2_ResNet32'
 filepath1 = os.path.join(save_dir,model1_name+'-noisy.h5')
@@ -271,7 +284,7 @@ else:
     class_constant = 1
 
 noise_ratio_selected = (eval_ratio*eval_ratio) / (eval_ratio*eval_ratio + class_constant*(1-eval_ratio)*(1-eval_ratio))
-print('Evaluated noisy of selected training set: %.4f\n'%noise_ratio_selected)
+print('Evaluated noise of selected training set: %.4f\n'%noise_ratio_selected)
 
 # parameters of val set      
 batch_size_val = min(int(np.sum(val_idx)*batch_size/(np.sum(train_idx))), int(0.5*batch_size))
@@ -328,8 +341,8 @@ for e in range(epochs):
             batch_idx2 = np.argsort(cross_entropy)[:n_keep]
             
             # training
-            model1.train_on_batch(x_S[batch_idx2,:], y_S[batch_idx2,:])  
-            model2.train_on_batch(x_S[batch_idx1,:], y_S[batch_idx1,:]) 
+            model1.train_on_batch(x_S[batch_idx2,:], y_S[batch_idx2,:])  ## train model1 based on data selected from model2 
+            model2.train_on_batch(x_S[batch_idx1,:], y_S[batch_idx1,:])  ## train model2 based on data selected from model1
         
         else:
             x_batch = np.concatenate([x_S, x_val])
@@ -362,7 +375,7 @@ model1.save(filepath1)
 model2.save(filepath2)
 
 """ Test """
-print('Test on model1')
+print('Test on model1') ## test the trained model on the correct dataset
 scores = model1.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', scores[0])
 print('Test accuracy:', scores[1])
